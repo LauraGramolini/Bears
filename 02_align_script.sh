@@ -33,5 +33,5 @@ for forward_read in *_R1_001_val_1.fq_trimmed.fq.gz; do
     #echo "$reverse_read"
 
     # Run bismark on the forward and reverse reads
-    bismark -p 40 --output_dir "$output_dir" "$RefGenome" -1 "$forward_read" -2 "$reverse_read"
+    bismark -p 4 --parallel 4 --score_min L,0,-0.6 --output_dir "$output_dir" "$RefGenome" -1 "$forward_read" -2 "$reverse_read"
 done
