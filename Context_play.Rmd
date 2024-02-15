@@ -1,0 +1,1040 @@
+---
+title: "Context_play"
+output:
+  html_document: default
+  pdf_document: default
+date: "2024-01-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Following the tutorial: https://nbis-workshop-epigenomics.readthedocs.io/en/latest/content/tutorials/methylationSeq/Seq_Tutorial.html
+
+Set directory and load library
+```{r}
+library(methylKit)
+library(dplyr)
+library(ggplot2)
+setwd("~/meth_extract")
+```
+
+
+1,2,3 muscolo marsicano
+4,5,6,7 sangue marsicano
+8,9,10 muscolo scandinavo
+11,12 sangue trentino
+
+
+#####CHG
+
+For ALL samples, Tissue comparison (Blood vs Muscle)
+
+Create list of files:
+```{r}
+# Specify the file path in the list
+file_list_CHG <- list("meth_extract/OR1_S13_CHG.txt", "meth_extract/OR2_S2_CHG.txt", "meth_extract/OR3_S3_CHG.txt", "meth_extract/OR4_S4_CHG.txt", "meth_extract/OR5_S5_CHG.txt", "meth_extract/OR6_S6_CHG.txt", "meth_extract/OR7_S7_CHG.txt", "meth_extract/OR8_S8_CHG.txt", "meth_extract/OR9_S9_CHG.txt", "meth_extract/OR10_S10_CHG.txt", "meth_extract/OR11_S11_CHG.txt", "meth_extract/OR12_S12_CHG.txt")
+```
+
+Load into methylkit:
+```{r}
+myobj_CHG <- methRead(file_list_CHG,
+           sample.id=list("OR1","OR2","OR3","OR4","OR5","OR6","OR7","OR8","OR9","OR10","OR11","OR12"),
+           pipeline = "bismarkCytosineReport",
+           assembly="Uarctos2.0",
+           treatment=c(0,0,0,1,1,1,1,0,0,0,1,1),
+           context="CHG",
+           mincov = 10
+           )
+```
+
+
+Get stats:
+```{r}
+
+getMethylationStats(myobj_CHG[[1]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[2]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[3]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[4]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[5]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[6]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[7]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[8]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[9]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[10]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[11]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[12]], plot=FALSE, both.strands=FALSE)
+
+```
+
+```{r}
+pdf("methplot_CHG.pdf")
+par(mfrow=c(2,3))
+getMethylationStats(myobj_CHG[[1]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[2]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[3]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[4]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[5]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[6]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[7]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[8]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[9]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[10]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[11]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHG[[12]], plot=TRUE, both.strands=FALSE)
+dev.off()
+```
+
+```{r}
+pdf("methcovplot_CHG.pdf")
+par(mfrow=c(2,3))
+getCoverageStats(myobj_CHG[[1]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[2]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[3]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[4]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[5]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[6]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[7]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[8]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[9]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[10]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[11]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHG[[12]], plot=TRUE, both.strands=FALSE)
+dev.off()
+```
+
+Let's merge:
+```{r}
+methCHGall=unite(myobj_CHG, destrand=FALSE)
+```
+
+```{r}
+PCASamples(methCHGall, screeplot=TRUE,scale = F,center = T)
+PCASamples(methCHGall,comp = c(1,2),scale = F,center = T,sd.filter=T)
+```
+
+This was with raw data, but now let's filter and normalize
+Filter by coverage:   
+```{r}
+myobjCHGfilt <- filterByCoverage(myobj_CHG,
+                               lo.count=10,
+                               lo.perc=NULL,
+                               hi.count=NULL,
+                               hi.perc=99.9)
+```
+
+
+And normalize:
+```{r}
+myobj.filt.norm_CHG <- normalizeCoverage(myobjCHGfilt, method = "median")
+```
+
+Let's merge again after this preprocessing and let's see if the prelimary stats are very different:
+```{r}
+methCHGall.norm <- unite(myobj.filt.norm_CHG, destrand=FALSE)
+nrow(methCHGall.norm) #how many sites are left? 
+```
+
+get percent methylation matrix
+```{r}
+pm=percMethylation(methCHGall.norm)
+sds=matrixStats::rowSds(pm)
+hist(sds, breaks = 100,xlim=c(0,30))
+```
+Filtering by standard deviation allows to reduce the dataset, keeping only possible differentially methylated sites. This will speed up the following analysis and reduces the number of test to be performed, thus reduces the possible multi-test penalties.
+
+Keep only more than sd=2
+```{r}
+methCHGall.norm <- methCHGall.norm[sds > 2]
+nrow(methCHGall.norm)
+```
+
+```{r}
+getCorrelation(methCHGall.norm,plot=TRUE)
+getCorrelation(methCHGall.norm,plot=F)
+```
+Cluster
+```{r}
+clusterSamples(methCHGall.norm, dist="correlation", method="ward", plot=TRUE)
+```
+
+
+
+```{r}
+### PCA
+PCASamples(methCHGall.norm, screeplot=TRUE,scale = F,center = T)
+#pdf("PCA.pdfgetCorrelation_muscleVSblood.pdf")
+PCASamples(methCHGall.norm, comp = c(1,2),scale = F,center = T,sd.filter=T)
+#dev.off()
+```
+
+Diff methylation in the two tissues:
+```{r}
+myDiffCHG <- calculateDiffMeth(methCHGall.norm,
+                            overdispersion = "MN",
+                            adjust="SLIM", test="Chisq",
+                            mc.cores=12,
+                            groups = pop)
+```
+
+This is the test between the tissues!!! Blood and Muscle, as when we loaded the samples into the methylkit object we gave this as treatment
+```{r}
+plot(myDiffCHG$meth.diff, -log10(myDiffCHG$qvalue),pch=20,cex=0.5)
+```
+Not many differentially methylated sites that are significant.
+Now
+Same for CHG for population contrasts - Marsican vs Scandinavian (only muscle)
+
+```{r}
+# Specify the file path in the list
+file_list_CHG_MS <- list("meth_extract/OR1_S13_CHG.txt", "meth_extract/OR2_S2_CHG.txt", "meth_extract/OR3_S3_CHG.txt", "meth_extract/OR8_S8_CHG.txt", "meth_extract/OR9_S9_CHG.txt", "meth_extract/OR10_S10_CHG.txt")
+```
+
+Load into methylkit:
+```{r}
+myobj_CHG_MS <- methRead(file_list_CHG_MS,
+           sample.id=list("OR1","OR2","OR3","OR8","OR9","OR10"),
+           pipeline = "bismarkCytosineReport",
+           assembly="Uarctos2.0",
+           treatment=c(0,0,0,1,1,1),
+           context="CHG",
+           mincov = 10
+           )
+```
+
+
+Filter by coverage:   
+```{r}
+myobjCHGfilt_MS <- filterByCoverage(myobj_CHG_MS,
+                               lo.count=10,
+                               lo.perc=NULL,
+                               hi.count=NULL,
+                               hi.perc=99.9)
+```
+
+
+And normalize:
+```{r}
+myobj.filt.norm_CHG_MS <- normalizeCoverage(myobjCHGfilt_MS, method = "median")
+```
+
+Let's merge again after this preprocessing and let's see if the prelimary stats are very different:
+```{r}
+methCHGall_MS.norm <- unite(myobj.filt.norm_CHG_MS, destrand=FALSE)
+nrow(methCHGall_MS.norm) #how many sites are left? 
+```
+
+get percent methylation matrix
+```{r}
+pm=percMethylation(methCHGall_MS.norm)
+sds=matrixStats::rowSds(pm)
+hist(sds, breaks = 100,xlim=c(0,30))
+```
+
+Keep only more than sd=2
+```{r}
+methCHGall_MS.norm <- methCHGall_MS.norm[sds > 2]
+nrow(methCHGall_MS.norm)
+```
+
+
+```{r}
+### PCA
+PCASamples(methCHGall_MS.norm, screeplot=TRUE,scale = F,center = T)
+#pdf("PCA.pdfgetCorrelation_muscleVSblood.pdf")
+PCASamples(methCHGall_MS.norm,comp = c(1,2),scale = F,center = T,sd.filter=T)
+#dev.off()
+```
+
+
+```{r}
+myDiffCHG_MS <- calculateDiffMeth(methCHGall_MS.norm,
+                            overdispersion = "MN",
+                            adjust="SLIM", test="Chisq",
+                            mc.cores=12,
+                            groups = pop)
+```
+
+Volcano plot between populations (Marsican - Scandinavia):
+```{r}
+plot(myDiffCHG_MS$meth.diff, -log10(myDiffCHG_MS$qvalue),pch=20,cex=0.5)
+```
+
+
+```{r}
+diffMethPerChr(myDiffCHG_MS,meth.cutoff = 25,plot=F)
+diffMethPerChr(myDiffCHG_MS,meth.cutoff = 25,plot=T)
+```
+
+Get hypermethylated regions (more than 25%)
+```{r}
+myDiffCHG_MS_25p.hyper <- getMethylDiff(myDiffCHG_MS,
+                                 difference=25,
+                                 qvalue=0.01,
+                                 type="hyper")
+myDiffCHG_MS_25p.hyper <- myDiffCHG_MS_25p.hyper[order(myDiffCHG_MS_25p.hyper$qvalue),]
+```
+Get hypo
+```{r}
+myDiffCHG_MS_25p.hypo <- getMethylDiff(myDiffCHG_MS,
+                                difference=25,
+                                qvalue=0.01,
+                                type="hypo")
+myDiffCHG_MS_25p.hypo <- myDiffCHG_MS_25p.hypo[order(myDiffCHG_MS_25p.hypo$qvalue),]
+```
+
+all
+```{r}
+myDiff25pCHG_MS <- getMethylDiff(myDiffCHG_MS,
+                           difference=25,
+                           qvalue=0.01)
+myDiff25pCHG_MS <- myDiff25pCHG_MS[order(myDiff25pCHG_MS$qvalue),]
+```
+
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("genomation")
+library(genomation)
+gff = gffToGRanges("~/refncbi/ncbi-genomes-2023-07-24/GCF_023065955.2_UrsArc2.0_genomic.gtf")
+
+refseq_anot <- readTranscriptFeatures("~/refncbi/ncbi-genomes-2023-07-24/GCF_023065955.2_UrsArc2.0_genomic.bed", remove.unusual = FALSE)
+
+```
+
+```{r}
+myDiffCHG_MS_25p.hyper.anot <- annotateWithGeneParts(target = as(myDiffCHG_MS_25p.hyper,"GRanges"),  feature = refseq_anot)
+
+```
+
+```{r}
+myDiffCHG_MS_25p.hypo.anot <- annotateWithGeneParts(target = as(myDiffCHG_MS_25p.hypo,"GRanges"),    feature = refseq_anot)
+
+```
+Plots
+```{r}
+df.myDiffCHG_MS_25p.hypo<-getData(myDiffCHG_MS_25p.hypo)
+plot(df.myDiffCHG_MS_25p.hypo$meth.diff~as.factor(df.myDiffCHG_MS_25p.hypo$chr))
+df.myDiffCHG_MS_25p.hyper<-getData(myDiffCHG_MS_25p.hyper)
+plot(df.myDiffCHG_MS_25p.hyper$meth.diff~as.factor(df.myDiffCHG_MS_25p.hyper$chr))
+```
+
+```{r}
+plotTargetAnnotation(myDiffCHG_MS_25p.hyper.anot, main = "Differential Methylation Annotation [hyper]")
+plotTargetAnnotation(myDiffCHG_MS_25p.hypo.anot, main = "Differential Methylation Annotation [hypo]")
+
+```
+
+```{r}
+dist_tss.hyper_CHG_MS <- getAssociationWithTSS(myDiffCHG_MS_25p.hyper.anot)
+head(dist_tss.hyper_CHG_MS)
+
+dist_tss.hypo_CHG_MS <- getAssociationWithTSS(myDiffCHG_MS_25p.hypo.anot)
+head(dist_tss.hypo_CHG_MS)
+
+```
+
+```{r}
+hist(dist_tss.hypo_CHG_MS$dist.to.feature,breaks = 50)
+hist(dist_tss.hyper_CHG_MS$dist.to.feature,breaks = 50)
+```
+
+
+```{r}
+hyperCHG_MS<-data.frame(getMembers(myDiffCHG_MS_25p.hyper.anot))
+dim(hyperCHG_MS)
+
+hypoCHG_MS<-data.frame(getMembers(myDiffCHG_MS_25p.hypo.anot))
+dim(hypoCHG_MS)
+
+```
+
+
+
+Same for Blood samples - population comparison: Marsican vs Trentino
+
+Create list:
+```{r}
+# Specify the file path in the list
+file_list_CHG_MT <- list("meth_extract/OR4_S4_CHG.txt", "meth_extract/OR5_S5_CHG.txt", "meth_extract/OR6_S6_CHG.txt", "meth_extract/OR7_S7_CHG.txt", "meth_extract/OR11_S11_CHG.txt", "meth_extract/OR12_S12_CHG.txt")
+```
+
+Load into methylkit:
+```{r}
+myobj_CHG_MT <- methRead(file_list_CHG_MT,
+           sample.id=list("OR4","OR5","OR6","OR7","OR11","OR12"),
+           pipeline = "bismarkCytosineReport",
+           assembly="Uarctos2.0",
+           treatment=c(0,0,0,0,1,1),
+           context="CHG",
+           mincov = 10
+           )
+```
+
+
+Filter by coverage:   
+```{r}
+myobjCHGfilt_MT <- filterByCoverage(myobj_CHG_MT,
+                               lo.count=10,
+                               lo.perc=NULL,
+                               hi.count=NULL,
+                               hi.perc=99.9)
+```
+
+
+And normalize:
+```{r}
+myobj.filt.norm_CHG_MT <- normalizeCoverage(myobjCHGfilt_MT, method = "median")
+```
+
+Let's merge again after this preprocessing and let's see if the preliminary stats are very different:
+```{r}
+methCHGall_MT.norm <- unite(myobj.filt.norm_CHG_MT, destrand=FALSE)
+nrow(methCHGall_MT.norm) #how many sites are left? 
+```
+
+get percent methylation matrix
+```{r}
+pm=percMethylation(methCHGall_MT.norm)
+sds=matrixStats::rowSds(pm)
+hist(sds, breaks = 100,xlim=c(0,30))
+```
+
+Keep only more than sd=2
+```{r}
+methCHGall_MT.norm <- methCHGall_MT.norm[sds > 2]
+nrow(methCHGall_MT.norm)
+```
+
+
+```{r}
+### PCA
+PCASamples(methCHGall_MT.norm, screeplot=TRUE,scale = F,center = T)
+#pdf("PCA.pdfgetCorrelation_muscleVSblood.pdf")
+PCASamples(methCHGall_MT.norm,comp = c(1,2),scale = F,center = T,sd.filter=T)
+#dev.off()
+```
+
+
+```{r}
+myDiffCHG_MT <- calculateDiffMeth(methCHGall_MT.norm,
+                            overdispersion = "MN",
+                            adjust="SLIM", test="Chisq",
+                            mc.cores=12,
+                            groups = pop)
+```
+
+Volcano plot between populations (Marsican - Scandinavia):
+```{r}
+plot(myDiffCHG_MT$meth.diff, -log10(myDiffCHG_MT$qvalue),pch=20,cex=0.5)
+```
+
+
+```{r}
+diffMethPerChr(myDiffCHG_MT,meth.cutoff = 25,plot=F)
+diffMethPerChr(myDiffCHG_MT,meth.cutoff = 25,plot=T)
+```
+
+Get hypermethylated regions (more than 25%)
+```{r}
+myDiffCHG_MT_25p.hyper <- getMethylDiff(myDiffCHG_MT,
+                                 difference=25,
+                                 qvalue=0.01,
+                                 type="hyper")
+myDiffCHG_MT_25p.hyper <- myDiffCHG_MT_25p.hyper[order(myDiffCHG_MT_25p.hyper$qvalue),]
+```
+Get hypo
+```{r}
+myDiffCHG_MT_25p.hypo <- getMethylDiff(myDiffCHG_MT,
+                                difference=25,
+                                qvalue=0.01,
+                                type="hypo")
+myDiffCHG_MT_25p.hypo <- myDiffCHG_MT_25p.hypo[order(myDiffCHG_MT_25p.hypo$qvalue),]
+```
+
+
+
+```{r}
+myDiffCHG_MT_25p.hyper.anot <- annotateWithGeneParts(target = as(myDiffCHG_MT_25p.hyper,"GRanges"),  feature = refseq_anot)
+
+```
+
+```{r}
+myDiffCHG_MT_25p.hypo.anot <- annotateWithGeneParts(target = as(myDiffCHG_MT_25p.hypo,"GRanges"),    feature = refseq_anot)
+
+```
+Plots
+```{r}
+df.myDiffCHG_MT_25p.hypo<-getData(myDiffCHG_MT_25p.hypo)
+plot(df.myDiffCHG_MT_25p.hypo$meth.diff~as.factor(df.myDiffCHG_MT_25p.hypo$chr))
+df.myDiffCHG_MT_25p.hyper<-getData(myDiffCHG_MT_25p.hyper)
+plot(df.myDiffCHG_MT_25p.hyper$meth.diff~as.factor(df.myDiffCHG_MT_25p.hyper$chr))
+```
+
+```{r}
+plotTargetAnnotation(myDiffCHG_MT_25p.hyper.anot, main = "Differential Methylation Annotation [hyper]")
+plotTargetAnnotation(myDiffCHG_MT_25p.hypo.anot, main = "Differential Methylation Annotation [hypo]")
+
+```
+
+```{r}
+dist_tss.hyper_CHG_MT <- getAssociationWithTSS(myDiffCHG_MT_25p.hyper.anot)
+head(dist_tss.hyper_CHG_MT)
+
+dist_tss.hypo_CHG_MT <- getAssociationWithTSS(myDiffCHG_MT_25p.hypo.anot)
+head(dist_tss.hypo_CHG_MT)
+
+```
+
+```{r}
+hist(dist_tss.hypo_CHG_MT$dist.to.feature,breaks = 50)
+hist(dist_tss.hyper_CHG_MT$dist.to.feature,breaks = 50)
+```
+
+```{r}
+hyperCHG_MT<-data.frame(getMembers(myDiffCHG_MT_25p.hyper.anot))
+dim(hyperCHG_MT)
+
+hypoCHG_MT<-data.frame(getMembers(myDiffCHG_MT_25p.hypo.anot))
+dim(hypoCHG_MT)
+
+```
+
+
+##CHH
+
+Only CHH methylation data for All samples - Tissue comparison (Blood vs Muscle)
+
+Create list:
+```{r}
+# Specify the file path in the list
+file_list_CHH <- list("meth_extract/OR1_S13_CHH.txt", "meth_extract/OR2_S2_CHH.txt", "meth_extract/OR3_S3_CHH.txt", "meth_extract/OR4_S4_CHH.txt", "meth_extract/OR5_S5_CHH.txt", "meth_extract/OR6_S6_CHH.txt", "meth_extract/OR7_S7_CHH.txt", "meth_extract/OR8_S8_CHH.txt", "meth_extract/OR9_S9_CHH.txt", "meth_extract/OR10_S10_CHH.txt", "meth_extract/OR11_S11_CHH.txt", "meth_extract/OR12_S12_CHH.txt")
+```
+
+Load into methylkit:
+```{r}
+myobj_CHH <- methRead(file_list_CHH,
+           sample.id=list("OR1","OR2","OR3","OR4","OR5","OR6","OR7","OR8","OR9","OR10","OR11","OR12"),
+           pipeline = "bismarkCytosineReport",
+           assembly="Uarctos2.0",
+           treatment=c(0,0,0,1,1,1,1,0,0,0,1,1),
+           context="CHH",
+           mincov = 10
+           )
+```
+
+Get stats:
+```{r}
+
+getMethylationStats(myobj_CHH[[1]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[2]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[3]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[4]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[5]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[6]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[7]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[8]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[9]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[10]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[11]], plot=FALSE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[12]], plot=FALSE, both.strands=FALSE)
+
+```
+
+```{r}
+pdf("methplot_CHH.pdf")
+par(mfrow=c(2,3))
+getMethylationStats(myobj_CHH[[1]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[2]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[3]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[4]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[5]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[6]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[7]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[8]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[9]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[10]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[11]], plot=TRUE, both.strands=FALSE)
+getMethylationStats(myobj_CHH[[12]], plot=TRUE, both.strands=FALSE)
+dev.off()
+```
+
+```{r}
+pdf("methcovplot_CHH.pdf")
+par(mfrow=c(2,3))
+getCoverageStats(myobj_CHH[[1]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[2]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[3]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[4]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[5]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[6]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[7]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[8]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[9]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[10]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[11]], plot=TRUE, both.strands=FALSE)
+getCoverageStats(myobj_CHH[[12]], plot=TRUE, both.strands=FALSE)
+dev.off()
+```
+
+Let's merge:
+```{r}
+methCHHall=unite(myobj_CHH, destrand=FALSE)
+```
+
+
+```{r}
+PCASamples(methCHHall, screeplot=TRUE,scale = F,center = T)
+PCASamples(methCHHall,comp = c(1,2),scale = F,center = T,sd.filter=T)
+```
+
+Filter by coverage:   
+```{r}
+myobjCHHfilt <- filterByCoverage(myobj_CHH,
+                               lo.count=10,
+                               lo.perc=NULL,
+                               hi.count=NULL,
+                               hi.perc=99.9)
+```
+
+
+And normalize:
+```{r}
+myobj.filt.norm_CHH <- normalizeCoverage(myobjCHHfilt, method = "median")
+```
+
+Let's merge again after this preprocessing and let's see if the preliminary stats are very different:
+```{r}
+methCHHall.norm <- unite(myobj.filt.norm_CHH, destrand=FALSE)
+nrow(methCHHall.norm) #how many sites are left? 
+```
+
+get percent methylation matrix
+```{r}
+pm=percMethylation(methCHHall.norm)
+sds=matrixStats::rowSds(pm)
+hist(sds, breaks = 100,xlim=c(0,30))
+```
+
+Keep only more than sd=2
+```{r}
+methCHHall.norm <- methCHHall.norm[sds > 2]
+nrow(methCHHall.norm)
+```
+
+```{r}
+getCorrelation(methCHHall.norm,plot=TRUE)
+getCorrelation(methCHHall.norm,plot=F)
+```
+Cluster
+```{r}
+clusterSamples(methCHHall.norm, dist="correlation", method="ward", plot=TRUE)
+```
+
+```{r}
+### PCA
+PCASamples(methCHHall.norm, screeplot=TRUE,scale = F,center = T)
+#pdf("PCA.pdfgetCorrelation_muscleVSblood.pdf")
+PCASamples(methCHHall.norm,comp = c(1,2),scale = F,center = T,sd.filter=T)
+#dev.off()
+```
+
+
+```{r}
+myDiffCHH <- calculateDiffMeth(methCHHall.norm,
+                            overdispersion = "MN",
+                            adjust="SLIM", test="Chisq",
+                            mc.cores=12,
+                            groups = pop)
+```
+
+
+```{r}
+plot(myDiffCHH$meth.diff, -log10(myDiffCHH$qvalue),pch=20,cex=0.5)
+```
+
+CHH for muscle samples - population comparison: Marsican - Scandinavian
+
+Create list:
+```{r}
+# Specify the file path in the list
+file_list_CHH_MS <- list("meth_extract/OR1_S13_CHH.txt", "meth_extract/OR2_S2_CHH.txt", "meth_extract/OR3_S3_CHH.txt","meth_extract/OR8_S8_CHH.txt", "meth_extract/OR9_S9_CHH.txt", "meth_extract/OR10_S10_CHH.txt")
+```
+
+Load into methylkit:
+```{r}
+myobj_CHH_MS <- methRead(file_list_CHH_MS,
+           sample.id=list("OR1","OR2","OR3","OR8","OR9","OR10"),
+           pipeline = "bismarkCytosineReport",
+           assembly="Uarctos2.0",
+           treatment=c(0,0,0,1,1,1),
+           context="CHH",
+           mincov = 10
+           )
+```
+
+
+Filter by coverage:   
+```{r}
+myobjCHHfilt_MS <- filterByCoverage(myobj_CHH_MS,
+                               lo.count=10,
+                               lo.perc=NULL,
+                               hi.count=NULL,
+                               hi.perc=99.9)
+```
+
+
+And normalize:
+```{r}
+myobj.filt.norm_CHH_MS <- normalizeCoverage(myobjCHHfilt_MS, method = "median")
+```
+
+
+```{r}
+methCHHall_MS.norm <- unite(myobj.filt.norm_CHH_MS, destrand=FALSE)
+nrow(methCHHall_MS.norm) #how many sites are left? 
+```
+
+get percent methylation matrix
+```{r}
+pm=percMethylation(methCHHall_MS.norm)
+sds=matrixStats::rowSds(pm)
+hist(sds, breaks = 100,xlim=c(0,30))
+```
+
+Keep only more than sd=2
+```{r}
+methCHHall_MS.norm <- methCHHall_MS.norm[sds > 2]
+nrow(methCHHall_MS.norm)
+```
+
+
+```{r}
+### PCA
+PCASamples(methCHHall_MS.norm, screeplot=TRUE,scale = F,center = T)
+#pdf("PCA.pdfgetCorrelation_muscleVSblood.pdf")
+PCASamples(methCHHall_MS.norm,comp = c(1,2),scale = F,center = T,sd.filter=T)
+#dev.off()
+```
+
+
+```{r}
+myDiffCHH_MS <- calculateDiffMeth(methCHHall_MS.norm,
+                            overdispersion = "MN",
+                            adjust="SLIM", test="Chisq",
+                            mc.cores=12,
+                            groups = pop)
+```
+
+Volcano plot between populations (Marsican - Scandinavia):
+```{r}
+plot(myDiffCHH_MS$meth.diff, -log10(myDiffCHH_MS$qvalue),pch=20,cex=0.5)
+```
+
+
+```{r}
+diffMethPerChr(myDiffCHH_MS,meth.cutoff = 25,plot=F)
+diffMethPerChr(myDiffCHH_MS,meth.cutoff = 25,plot=T)
+```
+
+Get hypermethylated regions (more than 25%)
+```{r}
+myDiffCHH_MS_25p.hyper <- getMethylDiff(myDiffCHH_MS,
+                                 difference=25,
+                                 qvalue=0.01,
+                                 type="hyper")
+myDiffCHH_MS_25p.hyper <- myDiffCHH_MS_25p.hyper[order(myDiffCHH_MS_25p.hyper$qvalue),]
+```
+Get hypo
+```{r}
+myDiffCHH_MS_25p.hypo <- getMethylDiff(myDiffCHH_MS,
+                                difference=25,
+                                qvalue=0.01,
+                                type="hypo")
+myDiffCHH_MS_25p.hypo <- myDiffCHH_MS_25p.hypo[order(myDiffCHH_MS_25p.hypo$qvalue),]
+```
+
+
+
+```{r}
+myDiffCHH_MS_25p.hyper.anot <- annotateWithGeneParts(target = as(myDiffCHH_MS_25p.hyper,"GRanges"),  feature = refseq_anot)
+
+```
+
+```{r}
+myDiffCHH_MS_25p.hypo.anot <- annotateWithGeneParts(target = as(myDiffCHH_MS_25p.hypo,"GRanges"),    feature = refseq_anot)
+
+```
+Plots
+```{r}
+df.myDiffCHH_MS_25p.hypo<-getData(myDiffCHH_MS_25p.hypo)
+plot(df.myDiffCHH_MS_25p.hypo$meth.diff~as.factor(df.myDiffCHH_MS_25p.hypo$chr))
+df.myDiffCHH_MS_25p.hyper<-getData(myDiffCHH_MS_25p.hyper)
+plot(df.myDiffCHH_MS_25p.hyper$meth.diff~as.factor(df.myDiffCHH_MS_25p.hyper$chr))
+```
+
+```{r}
+plotTargetAnnotation(myDiffCHH_MS_25p.hyper.anot, main = "Differential Methylation Annotation [hyper]")
+plotTargetAnnotation(myDiffCHH_MS_25p.hypo.anot, main = "Differential Methylation Annotation [hypo]")
+
+```
+
+```{r}
+dist_tss.hyper_CHH_MS <- getAssociationWithTSS(myDiffCHH_MS_25p.hyper.anot)
+head(dist_tss.hyper_CHH_MS)
+
+dist_tss.hypo_CHH_MS <- getAssociationWithTSS(myDiffCHH_MS_25p.hypo.anot)
+head(dist_tss.hypo_CHH_MS)
+
+```
+
+```{r}
+hist(dist_tss.hypo_CHH_MS$dist.to.feature,breaks = 50)
+hist(dist_tss.hyper_CHH_MS$dist.to.feature,breaks = 50)
+```
+
+
+```{r}
+hyperCHH_MS<-data.frame(getMembers(myDiffCHH_MS_25p.hyper.anot))
+dim(hyperCHH_MS)
+
+hypoCHH_MS<-data.frame(getMembers(myDiffCHH_MS_25p.hypo.anot))
+dim(hypoCHH_MS)
+```
+
+Same on CHH for Blood samples - population comparison: Marsican vs Trentino
+
+Create list:
+```{r}
+# Specify the file path in the list
+file_list_CHH_MT <- list("meth_extract/OR4_S4_CHH.txt", "meth_extract/OR5_S5_CHH.txt", "meth_extract/OR6_S6_CHH.txt", "meth_extract/OR7_S7_CHH.txt", "meth_extract/OR11_S11_CHH.txt", "meth_extract/OR12_S12_CHH.txt")
+```
+
+Load into methylkit:
+```{r}
+myobj_CHH_MT <- methRead(file_list_CHH_MT,
+           sample.id=list("OR4","OR5","OR6","OR7","OR11","OR12"),
+           pipeline = "bismarkCytosineReport",
+           assembly="Uarctos2.0",
+           treatment=c(0,0,0,0,1,1),
+           context="CHH",
+           mincov = 10
+           )
+```
+
+
+Filter by coverage:   
+```{r}
+myobjCHHfilt_MT <- filterByCoverage(myobj_CHH_MT,
+                               lo.count=10,
+                               lo.perc=NULL,
+                               hi.count=NULL,
+                               hi.perc=99.9)
+```
+
+
+And normalize:
+```{r}
+myobj.filt.norm_CHH_MT <- normalizeCoverage(myobjCHHfilt_MT, method = "median")
+```
+
+Let's merge again after this preprocessing and let's see if the prelimary stats are very different:
+```{r}
+methCHHall_MT.norm <- unite(myobj.filt.norm_CHH_MT, destrand=FALSE)
+nrow(methCHHall_MT.norm) #how many sites are left? 
+```
+
+get percent methylation matrix
+```{r}
+pm=percMethylation(methCHHall_MT.norm)
+sds=matrixStats::rowSds(pm)
+hist(sds, breaks = 100,xlim=c(0,30))
+```
+
+Keep only more than sd=2
+```{r}
+methCHHall_MT.norm <- methCHHall_MT.norm[sds > 2]
+nrow(methCHHall_MT.norm)
+```
+
+
+```{r}
+### PCA
+PCASamples(methCHHall_MT.norm, screeplot=TRUE,scale = F,center = T)
+#pdf("PCA.pdfgetCorrelation_muscleVSblood.pdf")
+PCASamples(methCHHall_MT.norm,comp = c(1,2),scale = F,center = T,sd.filter=T)
+#dev.off()
+```
+
+
+```{r}
+myDiffCHH_MT <- calculateDiffMeth(methCHHall_MT.norm,
+                            overdispersion = "MN",
+                            adjust="SLIM", test="Chisq",
+                            mc.cores=12,
+                            groups = pop)
+```
+
+Volcano plot between populations (Marsican - Scandinavia):
+```{r}
+plot(myDiffCHH_MT$meth.diff, -log10(myDiffCHH_MT$qvalue),pch=20,cex=0.5)
+```
+
+```{r}
+diffMethPerChr(myDiffCHH_MT,meth.cutoff = 25,plot=F)
+diffMethPerChr(myDiffCHH_MT,meth.cutoff = 25,plot=T)
+```
+
+Get hypermethylated regions (more than 25%)
+```{r}
+myDiffCHH_MT_25p.hyper <- getMethylDiff(myDiffCHH_MT,
+                                 difference=25,
+                                 qvalue=0.01,
+                                 type="hyper")
+myDiffCHH_MT_25p.hyper <- myDiffCHH_MT_25p.hyper[order(myDiffCHH_MT_25p.hyper$qvalue),]
+```
+Get hypo
+```{r}
+myDiffCHH_MT_25p.hypo <- getMethylDiff(myDiffCHH_MT,
+                                difference=25,
+                                qvalue=0.01,
+                                type="hypo")
+myDiffCHH_MT_25p.hypo <- myDiffCHH_MT_25p.hypo[order(myDiffCHH_MT_25p.hypo$qvalue),]
+```
+
+
+
+
+```{r}
+myDiffCHH_MT_25p.hyper.anot <- annotateWithGeneParts(target = as(myDiffCHH_MT_25p.hyper,"GRanges"),  feature = refseq_anot)
+
+```
+
+```{r}
+myDiffCHH_MT_25p.hypo.anot <- annotateWithGeneParts(target = as(myDiffCHH_MT_25p.hypo,"GRanges"),    feature = refseq_anot)
+
+```
+Plots
+```{r}
+df.myDiffCHH_MT_25p.hypo<-getData(myDiffCHH_MT_25p.hypo)
+plot(df.myDiffCHH_MT_25p.hypo$meth.diff~as.factor(df.myDiffCHH_MT_25p.hypo$chr))
+df.myDiffCHH_MT_25p.hyper<-getData(myDiffCHH_MT_25p.hyper)
+plot(df.myDiffCHH_MT_25p.hyper$meth.diff~as.factor(df.myDiffCHH_MT_25p.hyper$chr))
+```
+
+```{r}
+plotTargetAnnotation(myDiffCHH_MT_25p.hyper.anot, main = "Differential Methylation Annotation [hyper]")
+plotTargetAnnotation(myDiffCHH_MT_25p.hypo.anot, main = "Differential Methylation Annotation [hypo]")
+
+```
+
+```{r}
+dist_tss.hyper_CHH_MT <- getAssociationWithTSS(myDiffCHH_MT_25p.hyper.anot)
+head(dist_tss.hyper_CHH_MT)
+
+dist_tss.hypo_CHH_MT <- getAssociationWithTSS(myDiffCHH_MT_25p.hypo.anot)
+head(dist_tss.hypo_CHH_MT)
+
+```
+
+```{r}
+hist(dist_tss.hypo_CHH_MT$dist.to.feature,breaks = 50)
+hist(dist_tss.hyper_CHH_MT$dist.to.feature,breaks = 50)
+```
+
+```{r}
+hyperCHH_MT<-data.frame(getMembers(myDiffCHH_MT_25p.hyper.anot))
+dim(hyperCHH_MT)
+
+hypoCHH_MT<-data.frame(getMembers(myDiffCHH_MT_25p.hypo.anot))
+dim(hypoCHH_MT)
+```
+
+#Read CHG methylation numbers for each all samples: descriptive stats
+```{r}
+CHGcount <- read.table("~/aligned/CHG_methCs.txt", header = TRUE)
+```
+
+```{r}
+tissue<-c("M","M","M","S","S","S","S","M","M","M","S","S")
+pop<-c("M","M","M","M","M","M","M","S","S","S","T","T")
+id<-c("OR01","OR02","OR03","OR04","OR05","OR06","OR07","OR08","OR09","OR10","OR11","OR12")
+reordered_df <- data.frame(Sample = id, tissue = tissue, pop = pop)
+CHGcount <- merge(CHGcount, reordered_df, by = "Sample", all.x = TRUE)
+
+```
+
+
+```{r}
+CHGcount %>% 
+ggplot(mapping = aes(x = Sample, y = Meth_Cs)) +
+         geom_point(aes(colour = tissue, shape =pop), size = 4)
+  
+```
+
+
+```{r}
+summary_stats_conditions_CHG <- CHGcount %>%
+  group_by(tissue, pop) %>%
+  summarise(mean = mean(Meth_Cs),
+            sd = sd(Meth_Cs))
+```
+
+```{r}
+ggplot(summary_stats_conditions_CHG, aes(x = paste(tissue, pop), y = mean)) +
+  geom_boxplot(aes(ymin = mean - sd, ymax = mean + sd),
+               width = 0.5, 
+               fill = "lightblue",
+               outlier.shape = NA) +
+  labs(x = "Group (tissue*pop)", y = "Mean Meth_Cs") +
+  geom_text(aes(label = paste("Mean:", round(mean, 2), "\nSD:", round(sd, 2))),
+            vjust = -0.5, 
+            size = 3) +
+  theme_minimal()
+```
+
+
+#Same for CHH
+Read CHG methylated numbers for each sample:
+```{r}
+CHHcount <- read.table("~/aligned/CHH_methCs.txt", header = TRUE)
+```
+
+```{r}
+
+CHHcount <- merge(CHHcount, reordered_df, by = "Sample", all.x = TRUE)
+
+```
+
+
+```{r}
+CHHcount %>% 
+ggplot(mapping = aes(x = Sample, y = Meth_Cs)) +
+         geom_point(aes(colour = tissue, shape =pop), size = 4)
+  
+```
+
+
+```{r}
+summary_stats_conditions_CHH <- CHHcount %>%
+  group_by(tissue, pop) %>%
+  summarise(mean = mean(Meth_Cs),
+            sd = sd(Meth_Cs))
+```
+
+```{r}
+ggplot(summary_stats_conditions_CHH, aes(x = paste(tissue, pop), y = mean)) +
+  geom_boxplot(aes(ymin = mean - sd, ymax = mean + sd),
+               width = 0.5, 
+               fill = "lightblue",
+               outlier.shape = NA) +
+  labs(x = "Group (tissue*pop)", y = "Mean Meth_Cs") +
+  geom_text(aes(label = paste("Mean:", round(mean, 2), "\nSD:", round(sd, 2))),
+            vjust = -0.5, 
+            size = 3) +
+  theme_minimal()
+```
+
+
