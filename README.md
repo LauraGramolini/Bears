@@ -1,7 +1,7 @@
 # Bears
 # Epigenetic Variation in European Brown Bear Populations
 
--https://doi.org/10.3389/fevo.2024.1504225
+https://doi.org/10.3389/fevo.2024.1504225
 
 ## Overview
 
